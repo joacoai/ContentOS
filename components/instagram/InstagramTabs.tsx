@@ -1,16 +1,48 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 
-type Tab = "analisis" | "reels"
+type Tab = "analisis" | "reels" | "historias"
 
 interface InstagramTabsProps {
   analysisSlot: React.ReactNode
   reelsSlot: React.ReactNode
+  storiesSlot: React.ReactNode
 }
 
-export function InstagramTabs({ analysisSlot, reelsSlot }: InstagramTabsProps) {
+function TabSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 animate-pulse">
+      <div className="flex gap-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="flex-1 rounded-2xl h-24" style={{ background: 'var(--bg-elevated)' }} />
+        ))}
+      </div>
+      <div className="rounded-2xl h-48" style={{ background: 'var(--bg-elevated)' }} />
+      <div className="grid grid-cols-3 gap-3">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <div key={i} className="rounded-2xl h-32" style={{ background: 'var(--bg-elevated)' }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function InstagramTabs({ analysisSlot, reelsSlot, storiesSlot }: InstagramTabsProps) {
   const [active, setActive] = useState<Tab>("analisis")
+  const [visited, setVisited] = useState<Set<Tab>>(new Set(["analisis"]))
+  const [loading, setLoading] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
+
+  function switchTab(tab: Tab) {
+    if (tab === active) return
+    setLoading(true)
+    setActive(tab)
+    setVisited(prev => new Set(prev).add(tab))
+    timerRef.current = setTimeout(() => setLoading(false), 400)
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -22,10 +54,11 @@ export function InstagramTabs({ analysisSlot, reelsSlot }: InstagramTabsProps) {
         {([
           { id: "analisis", label: "Análisis IA" },
           { id: "reels", label: "Reels" },
+          { id: "historias", label: "Historias" },
         ] as { id: Tab; label: string }[]).map(({ id, label }) => (
           <button
             key={id}
-            onClick={() => setActive(id)}
+            onClick={() => switchTab(id)}
             className="rounded-lg px-4 py-1.5 text-[12px] font-semibold transition-all cursor-pointer"
             style={
               active === id
@@ -47,13 +80,22 @@ export function InstagramTabs({ analysisSlot, reelsSlot }: InstagramTabsProps) {
         ))}
       </div>
 
-      {/* Content */}
-      <div style={{ display: active === "analisis" ? "block" : "none" }}>
-        {analysisSlot}
-      </div>
-      <div style={{ display: active === "reels" ? "block" : "none" }}>
-        {reelsSlot}
-      </div>
+      {/* Loading skeleton — only on first visit of a tab */}
+      {loading ? (
+        <TabSkeleton />
+      ) : (
+        <>
+          {visited.has("analisis") && (
+            <div style={{ display: active === "analisis" ? "block" : "none" }}>{analysisSlot}</div>
+          )}
+          {visited.has("reels") && (
+            <div style={{ display: active === "reels" ? "block" : "none" }}>{reelsSlot}</div>
+          )}
+          {visited.has("historias") && (
+            <div style={{ display: active === "historias" ? "block" : "none" }}>{storiesSlot}</div>
+          )}
+        </>
+      )}
     </div>
   )
 }

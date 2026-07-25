@@ -25,6 +25,27 @@ export interface IGCacheEntry<T> {
   payload: T
 }
 
+// Tipos para Historias de Instagram
+export interface IGStoryInsights {
+  impressions: number
+  reach: number
+  exits: number
+  replies: number
+  taps_forward: number
+  taps_back: number
+  completion_rate: number
+}
+
+export interface IGStoryItem {
+  id: string
+  media_type: 'IMAGE' | 'VIDEO'
+  media_url?: string
+  thumbnail_url?: string
+  permalink?: string
+  timestamp: string
+  insights?: IGStoryInsights
+}
+
 // Tipo unificado para la UI del dashboard
 export interface IGReelData {
   id: string

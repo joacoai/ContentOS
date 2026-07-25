@@ -8,6 +8,7 @@ import { MetricCard } from "@/components/shared/MetricCard"
 import { ViewsChart } from "@/components/dashboard/ViewsChart"
 import { ReelsFeed } from "@/components/instagram/ReelsFeed"
 import { AIAnalysis } from "@/components/instagram/AIAnalysis"
+import { StoriesFeed } from "@/components/instagram/StoriesFeed"
 import { InstagramTabs } from "@/components/instagram/InstagramTabs"
 import { FadeUp } from "@/components/shared/Animate"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -123,6 +124,7 @@ export default async function InstagramPage() {
         <InstagramTabs
           analysisSlot={<AIAnalysis />}
           reelsSlot={<ReelsFeed />}
+          storiesSlot={<StoriesFeed />}
         />
       </FadeUp>
 

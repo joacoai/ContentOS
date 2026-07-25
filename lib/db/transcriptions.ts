@@ -5,7 +5,7 @@ async function getEmbedding(text: string): Promise<number[]> {
   if (!apiKey) throw new Error('GEMINI_API_KEY no configurada')
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -38,14 +38,18 @@ export interface TranscriptionData {
 export async function upsertTranscription(data: TranscriptionData) {
   const { postId, text, lines, ai_insights, improvement_points, visual_analysis, duration_s, caption } = data
 
-  // Combinar caption + transcripción + insights para mejor señal semántica
-  const partsToEmbed = [
-    caption ? `[CAPTION] ${caption}` : '',
-    `[TRANSCRIPCIÓN] ${text}`,
-    ai_insights?.length ? `[INSIGHTS] ${ai_insights.join(' ')}` : '',
-  ].filter(Boolean).join('\n')
-
-  const embedding = await getEmbedding(partsToEmbed)
+  // Intentar generar embedding — opcional, no bloquea si falla
+  let embedding: number[] | null = null
+  try {
+    const partsToEmbed = [
+      caption ? `[CAPTION] ${caption}` : '',
+      `[TRANSCRIPCIÓN] ${text}`,
+      ai_insights?.length ? `[INSIGHTS] ${ai_insights.join(' ')}` : '',
+    ].filter(Boolean).join('\n')
+    embedding = await getEmbedding(partsToEmbed)
+  } catch {
+    // Sin embedding: transcripción se guarda igual, búsqueda semántica deshabilitada
+  }
 
   const { error } = await supabase.from('transcriptions').upsert({
     post_id: postId,
@@ -57,7 +61,7 @@ export async function upsertTranscription(data: TranscriptionData) {
     visual_analysis: visual_analysis ?? null,
     duration_s: duration_s ?? 0,
     transcribed_at: new Date().toISOString(),
-    embedding,
+    ...(embedding ? { embedding } : {}),
   }, { onConflict: 'post_id' })
 
   if (error) throw new Error(`upsertTranscription ${postId}: ${error.message}`)

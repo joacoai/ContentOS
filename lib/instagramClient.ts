@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import type { IGMediaItem, IGInsights, IGCacheEntry } from './instagramTypes'
+import type { IGMediaItem, IGInsights, IGCacheEntry, IGStoryItem, IGStoryInsights } from './instagramTypes'
 
 const CACHE_DIR = '/tmp/instagram-cache'
 const CACHE_HOURS_MEDIA = 6
@@ -132,6 +132,66 @@ export async function getFollowerCount(): Promise<number> {
   const count = data.followers_count ?? 0
   saveCache('follower_count', count)
   return count
+}
+
+// Story insights — métricas específicas de historias
+async function getIGStoryInsights(mediaId: string, token: string): Promise<IGStoryInsights> {
+  const metrics = 'exits,impressions,reach,replies,taps_forward,taps_back'
+  const url = `https://graph.facebook.com/v21.0/${mediaId}/insights?metric=${metrics}&access_token=${token}`
+  const res = await fetch(url)
+  const data = await res.json()
+
+  if (data.error) {
+    return { impressions: 0, reach: 0, exits: 0, replies: 0, taps_forward: 0, taps_back: 0, completion_rate: 0 }
+  }
+
+  const getValue = (name: string) =>
+    data.data?.find((d: { name: string }) => d.name === name)?.values?.[0]?.value ?? 0
+
+  const impressions = getValue('impressions')
+  const exits = getValue('exits')
+
+  return {
+    impressions,
+    reach: getValue('reach'),
+    exits,
+    replies: getValue('replies'),
+    taps_forward: getValue('taps_forward'),
+    taps_back: getValue('taps_back'),
+    completion_rate: impressions > 0 ? (impressions - exits) / impressions : 0,
+  }
+}
+
+// Historias activas (últimas 24h) con sus insights — cache 1h
+export async function getIGStories(forceRefresh = false): Promise<IGStoryItem[]> {
+  if (!forceRefresh) {
+    const cached = loadCache<IGStoryItem[]>('stories_list', 1)
+    if (cached) return cached
+  }
+
+  const creds = getCredentials()
+  if (!creds) return []
+  const { token, userId } = creds
+
+  const fields = 'id,media_type,media_url,thumbnail_url,permalink,timestamp'
+  const url = `https://graph.facebook.com/v21.0/${userId}/stories?fields=${fields}&access_token=${token}`
+
+  const res = await fetch(url)
+  const data = await res.json()
+
+  if (data.error) return []
+
+  const stories: IGStoryItem[] = data.data ?? []
+
+  const withInsights = await Promise.all(
+    stories.map(async (story) => ({
+      ...story,
+      insights: await getIGStoryInsights(story.id, token),
+    }))
+  )
+
+  saveCache('stories_list', withInsights)
+  return withInsights
 }
 
 // media_url fresca — NUNCA cachear, expira ~1h

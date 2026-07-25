@@ -10,8 +10,8 @@ import {
   Youtube,
   MessageSquare,
   Settings,
-  ChevronLeft,
-  ChevronRight,
+  Zap,
+  CalendarDays,
   PanelLeftClose,
   PanelLeftOpen,
   X,
@@ -23,6 +23,8 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/instagram", label: "Instagram", icon: Instagram },
   { href: "/youtube", label: "YouTube", icon: Youtube },
+  { href: "/hooks", label: "Hooks", icon: Zap },
+  { href: "/content-plan", label: "Plan Semanal", icon: CalendarDays },
   { href: "/chat", label: "Content Intelligence", icon: MessageSquare },
 ]
 
